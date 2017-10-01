@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">BottomTabNavigation</string>
+
+    <string name="chats_toolbar">FnF Chats</string>
+    <string name="contacts_toolbar">FnF Contacts</string>
+    <string name="profile_toolbar">FnF Profile</string>
+
+    <string name="drawer_open">Open</string>
+    <string name="drawer_close">Close</string>
+
+    <string name="click_action">You Have Clicked</string>
+    <string name="something_wrong">Somethings Wrong</string>
+
+</resources>
