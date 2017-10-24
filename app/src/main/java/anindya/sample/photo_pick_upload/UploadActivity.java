@@ -2,10 +2,8 @@ package anindya.sample.photo_pick_upload;
 
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -15,20 +13,10 @@ import android.support.v4.content.FileProvider;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.text.InputType;
-import android.util.Log;
-import android.view.KeyEvent;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewTreeObserver;
-import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputMethodManager;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +27,6 @@ public class UploadActivity extends AppCompatActivity {
 
     //Defining Variables
     String TAG = getClass().getName();
-    EditText mEditTextTitle, mEditTextDesc;
     ImageView mIconCamera, mIconGallery, mImageView, mIconImageEdit;
     FloatingActionButton mFab;
     boolean isKeyboardOpen = false;
@@ -68,22 +55,11 @@ public class UploadActivity extends AppCompatActivity {
         // view initialization
         mLayoutButtons = (LinearLayout) findViewById(R.id.button_layout);
         mLayoutImageView = (RelativeLayout) findViewById(R.id.image_layout);
-
         mIconCamera = (ImageView) findViewById(R.id.camera_btn);
         mIconGallery = (ImageView) findViewById(R.id.gallery_btn);
         mImageView = (ImageView) findViewById(R.id.image);
         mIconImageEdit = (ImageView) findViewById(R.id.image_edit);
-
-        mEditTextTitle = (EditText) findViewById(R.id.editText_title);
-        mEditTextDesc = (EditText) findViewById(R.id.editText_desc);
-
         mFab = (FloatingActionButton) findViewById(R.id.send_fab);
-
-        mEditTextTitle.setImeOptions(EditorInfo.IME_ACTION_DONE);
-        mEditTextTitle.setRawInputType(InputType.TYPE_CLASS_TEXT);
-
-        mEditTextDesc.setImeOptions(EditorInfo.IME_ACTION_DONE);
-        mEditTextDesc.setRawInputType(InputType.TYPE_CLASS_TEXT);
 
         // fab button listener
         mFab.setOnClickListener(new View.OnClickListener() {
@@ -93,42 +69,9 @@ public class UploadActivity extends AppCompatActivity {
             }
         });
 
-        mEditTextTitle.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                int result = actionId & EditorInfo.IME_MASK_ACTION;
-                switch (result) {
-                    case EditorInfo.IME_ACTION_DONE:
-                        hideKeyboard();
-                        break;
-                }
-                return true;
-            }
-        });
-
-        mEditTextDesc.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                int result = actionId & EditorInfo.IME_MASK_ACTION;
-                switch (result) {
-                    case EditorInfo.IME_ACTION_DONE:
-                        hideKeyboard();
-                        break;
-                }
-                return true;
-            }
-        });
-
         mIconCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mEditTextTitle.hasFocus()) {
-                    mEditTextTitle.clearFocus();
-                }
-                if (mEditTextDesc.hasFocus()) {
-                    mEditTextDesc.clearFocus();
-                }
-                hideKeyboard();
                 goToCamera();
             }
         });
@@ -136,13 +79,6 @@ public class UploadActivity extends AppCompatActivity {
         mIconGallery.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mEditTextTitle.hasFocus()) {
-                    mEditTextTitle.clearFocus();
-                }
-                if (mEditTextDesc.hasFocus()) {
-                    mEditTextDesc.clearFocus();
-                }
-                hideKeyboard();
                 goToGallery();
             }
         });
@@ -162,31 +98,6 @@ public class UploadActivity extends AppCompatActivity {
                 }
                 if (mLayoutButtons.getVisibility() == View.GONE) {
                     mLayoutButtons.setVisibility(View.VISIBLE);
-                }
-            }
-        });
-
-        final View contentView = findViewById(R.id.upload_parent);
-        contentView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-            @Override
-            public void onGlobalLayout() {
-
-                Rect r = new Rect();
-                contentView.getWindowVisibleDisplayFrame(r);
-                int screenHeight = contentView.getRootView().getHeight();
-
-                // r.bottom is the position above soft keypad or device button.
-                // if keypad is shown, the r.bottom is smaller than that before.
-                int keypadHeight = screenHeight - r.bottom;
-
-                if (keypadHeight > screenHeight * 0.15) { // 0.15 ratio is perhaps enough to determine keypad height.
-                    // keyboard is opened
-                    isKeyboardOpen = true;
-                } else {
-                    // keyboard is closed
-                    if (isKeyboardOpen) {
-                        isKeyboardOpen = false;
-                    }
                 }
             }
         });
@@ -273,28 +184,9 @@ public class UploadActivity extends AppCompatActivity {
         }
     }
 
-    // method to make toast
-    public void makeToast(String message) {
-        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
-    }
-
     // Set up the toolbar title
     public void setActionBarTitle(String title) {
         getSupportActionBar().setTitle(title);
-    }
-
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.
-                INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
-        return true;
-    }
-
-    private void hideKeyboard() {
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.
-                INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
     }
 
     // back arrow action

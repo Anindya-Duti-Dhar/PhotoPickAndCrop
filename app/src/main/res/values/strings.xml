@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Photo Share</string>
+    <string name="app_name">Photo Pick and Crop</string>
 
     <string name="chats_toolbar">FnF Chats</string>
     <string name="contacts_toolbar">FnF Contacts</string>

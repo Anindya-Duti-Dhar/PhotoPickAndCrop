@@ -34,33 +34,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginRight="8dp"
-            android:layout_marginLeft="8dp"
-            android:background="@color/colorPrimary"/>
-
-        <EditText
-            android:id="@+id/editText_title"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_gravity="top"
-            android:gravity="top"
-            android:padding="8dp"
-            android:layout_marginRight="8dp"
-            android:layout_marginLeft="8dp"
-            android:textCursorDrawable="@null"
-            android:background="@color/md_white_1000"
-            android:hint="Write Title Here"
-            android:inputType="textMultiLine"
-            android:scrollbars="vertical"
-            android:maxLength="140"
-            android:textColor="@color/md_black_1000"
-            android:textSize="16sp"
-            android:textStyle="normal"/>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
+            android:layout_marginTop="32dp"
             android:layout_marginRight="8dp"
             android:layout_marginLeft="8dp"
             android:background="@color/colorPrimary"/>
@@ -70,7 +44,7 @@
             android:layout_width="240dp"
             android:layout_height="240dp"
             android:visibility="visible"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="24dp"
             android:orientation="horizontal"
             android:background="@color/md_white_1000"
             android:layout_gravity="center"
@@ -106,7 +80,7 @@
             android:id="@+id/image_layout"
             android:layout_width="240dp"
             android:layout_height="240dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="24dp"
             android:layout_gravity="center"
             android:gravity="center"
             android:visibility="gone">
@@ -137,33 +111,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginRight="8dp"
-            android:layout_marginLeft="8dp"
-            android:background="@color/colorPrimary"/>
-
-        <EditText
-            android:id="@+id/editText_desc"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_gravity="top"
-            android:gravity="top"
-            android:padding="8dp"
-            android:layout_marginRight="8dp"
-            android:layout_marginLeft="8dp"
-            android:textCursorDrawable="@null"
-            android:background="@color/md_white_1000"
-            android:hint="Write Description Here"
-            android:inputType="textMultiLine"
-            android:scrollbars="vertical"
-            android:maxLength="140"
-            android:textColor="@color/md_black_1000"
-            android:textSize="16sp"
-            android:textStyle="normal"/>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
+            android:layout_marginTop="24dp"
             android:layout_marginRight="8dp"
             android:layout_marginLeft="8dp"
             android:background="@color/colorPrimary"/>
