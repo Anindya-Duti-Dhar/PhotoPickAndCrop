@@ -6,6 +6,7 @@
         <item name="android:statusBarColor">@color/colorPrimaryDark</item>
         <item name="android:popupMenuStyle">@style/PopupMenu</item>
         <item name="colorControlNormal">@android:color/white</item>
+        <item name="android:windowDisablePreview">true</item>
     </style>
 
     <style name="PopupMenu" parent="@android:style/Widget.PopupMenu">
