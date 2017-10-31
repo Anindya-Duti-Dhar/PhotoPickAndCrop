@@ -8,6 +8,7 @@ import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -131,9 +132,9 @@ public class UploadActivity extends AppCompatActivity {
     }
 
     public void goToCamera() {
-        String deviceName =  android.os.Build.MANUFACTURER;
-        Log.d("duti", "Device Name: "+deviceName);
-        if(deviceName.equalsIgnoreCase("samsung")) {
+        String deviceName =  android.os.Build.MANUFACTURER+" "+android.os.Build.DEVICE+" "+android.os.Build.MODEL;
+        Log.d("duti", "Device Details: "+deviceName);
+        if(deviceName.contains("GT-I9301I")) {
             Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
             startActivityForResult(intent, ACTION_REQUEST_CAMERA);
         }
@@ -209,8 +210,8 @@ public class UploadActivity extends AppCompatActivity {
         switch (requestCode) {
             case ACTION_REQUEST_CAMERA:
                 if (resultCode == Activity.RESULT_OK) {
-                    String deviceName =  android.os.Build.MANUFACTURER;
-                    if(deviceName.equalsIgnoreCase("samsung")) {
+                    String deviceName =  android.os.Build.MANUFACTURER+" "+android.os.Build.DEVICE+" "+android.os.Build.MODEL;
+                    if(deviceName.contains("GT-I9301I")) {
                         // Describe the columns you'd like to have returned. Selecting from the Thumbnails location gives you both the Thumbnail Image ID, as well as the original image ID
                         String[] projection = {
                                 MediaStore.Images.Thumbnails._ID,  // The columns we want
