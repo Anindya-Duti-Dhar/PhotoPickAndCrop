@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -130,34 +131,42 @@ public class UploadActivity extends AppCompatActivity {
     }
 
     public void goToCamera() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        // Ensure that there's a camera activity to handle the intent
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            // Create the File where the photo should go
-            File photoFile = null;
-            try {
-                photoFile = createImageFile();
-            } catch (IOException ex) {
-                // Error occurred while creating the File
-                makeToast("Error creating Image File");
-            }
-            // Continue only if the File was successfully created
-            if (photoFile != null) {
-                // create file mUriFromIntent
-                mCameraImageUri = FileProvider.getUriForFile(UploadActivity.this,
-                        BuildConfig.APPLICATION_ID + ".fileprovider",
-                        photoFile);
-                // add uri to intent
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCameraImageUri);
-
-                // grant read uri permission
-                List<ResolveInfo> resInfoList = getPackageManager().queryIntentActivities(takePictureIntent, PackageManager.MATCH_DEFAULT_ONLY);
-                for (ResolveInfo resolveInfo : resInfoList) {
-                    String packageName = resolveInfo.activityInfo.packageName;
-                    grantUriPermission(packageName, mCameraImageUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        String deviceName =  android.os.Build.MANUFACTURER;
+        Log.d("duti", "Device Name: "+deviceName);
+        if(deviceName.equalsIgnoreCase("samsung")) {
+            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            startActivityForResult(intent, ACTION_REQUEST_CAMERA);
+        }
+        else {
+            Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            // Ensure that there's a camera activity to handle the intent
+            if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+                // Create the File where the photo should go
+                File photoFile = null;
+                try {
+                    photoFile = createImageFile();
+                } catch (IOException ex) {
+                    // Error occurred while creating the File
+                    makeToast("Error creating Image File");
                 }
-                // start intent
-                startActivityForResult(takePictureIntent, ACTION_REQUEST_CAMERA);
+                // Continue only if the File was successfully created
+                if (photoFile != null) {
+                    // create file mUriFromIntent
+                    mCameraImageUri = FileProvider.getUriForFile(UploadActivity.this,
+                            BuildConfig.APPLICATION_ID + ".fileprovider",
+                            photoFile);
+                    // add uri to intent
+                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCameraImageUri);
+
+                    // grant read uri permission
+                    List<ResolveInfo> resInfoList = getPackageManager().queryIntentActivities(takePictureIntent, PackageManager.MATCH_DEFAULT_ONLY);
+                    for (ResolveInfo resolveInfo : resInfoList) {
+                        String packageName = resolveInfo.activityInfo.packageName;
+                        grantUriPermission(packageName, mCameraImageUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    }
+                    // start intent
+                    startActivityForResult(takePictureIntent, ACTION_REQUEST_CAMERA);
+                }
             }
         }
     }
@@ -200,10 +209,74 @@ public class UploadActivity extends AppCompatActivity {
         switch (requestCode) {
             case ACTION_REQUEST_CAMERA:
                 if (resultCode == Activity.RESULT_OK) {
-                    Uri selectedImage = mCameraImageUri;
-                    Log.d("duti", "camera image uri (file path): "+mCameraImageUri);
-                    if (selectedImage != null) {
-                        startCrop(selectedImage, "camera", CameraPhotoFile.getPath());
+                    String deviceName =  android.os.Build.MANUFACTURER;
+                    if(deviceName.equalsIgnoreCase("samsung")) {
+                        // Describe the columns you'd like to have returned. Selecting from the Thumbnails location gives you both the Thumbnail Image ID, as well as the original image ID
+                        String[] projection = {
+                                MediaStore.Images.Thumbnails._ID,  // The columns we want
+                                MediaStore.Images.Thumbnails.IMAGE_ID,
+                                MediaStore.Images.Thumbnails.KIND,
+                                MediaStore.Images.Thumbnails.DATA};
+                        String selection = MediaStore.Images.Thumbnails.KIND + "=" + // Select only mini's
+                                MediaStore.Images.Thumbnails.MINI_KIND;
+
+                        String sort = MediaStore.Images.Thumbnails._ID + " DESC";
+
+                        //At the moment, this is a bit of a hack, as I'm returning ALL images, and just taking the latest one. There is a better way to narrow this down I think with a WHERE clause which is currently the selection variable
+                        Cursor myCursor = this.managedQuery(MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI, projection, selection, null, sort);
+
+                        long imageId = 0l;
+                        long thumbnailImageId = 0l;
+                        String thumbnailPath = "";
+
+                        try {
+                            myCursor.moveToFirst();
+                            imageId = myCursor.getLong(myCursor.getColumnIndexOrThrow(MediaStore.Images.Thumbnails.IMAGE_ID));
+                            thumbnailImageId = myCursor.getLong(myCursor.getColumnIndexOrThrow(MediaStore.Images.Thumbnails._ID));
+                            thumbnailPath = myCursor.getString(myCursor.getColumnIndexOrThrow(MediaStore.Images.Thumbnails.DATA));
+                        } finally {
+                            myCursor.close();
+                        }
+
+                        //Create new Cursor to obtain the file Path for the large image
+
+                        String[] largeFileProjection = {
+                                MediaStore.Images.ImageColumns._ID,
+                                MediaStore.Images.ImageColumns.DATA
+                        };
+
+                        String largeFileSort = MediaStore.Images.ImageColumns._ID + " DESC";
+                        myCursor = this.managedQuery(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, largeFileProjection, null, null, largeFileSort);
+                        String largeImagePath = "";
+
+                        try {
+                            myCursor.moveToFirst();
+                            //This will actually give you the file path location of the image.
+                            largeImagePath = myCursor.getString(myCursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.DATA));
+                        } finally {
+                            myCursor.close();
+                        }
+                        // These are the two URI's you'll be interested in. They give you a handle to the actual images
+                        Uri uriLargeImage = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, String.valueOf(imageId));
+                        Uri uriThumbnailImage = Uri.withAppendedPath(MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI, String.valueOf(thumbnailImageId));
+
+                        Log.d("duti", "camera image uri (file path): " + uriLargeImage);
+                        if (uriLargeImage != null) {
+                            startCrop(uriLargeImage, "camera", largeImagePath);
+                        }
+                        else if (uriLargeImage==null){
+                            makeToast("Unable to take photo");
+                        }
+                    }
+                    else{
+                        Uri selectedImage = mCameraImageUri;
+                        Log.d("duti", "camera image uri (file path): " + mCameraImageUri);
+                        if (selectedImage != null) {
+                            startCrop(selectedImage, "camera", CameraPhotoFile.getPath());
+                        }
+                        else if (selectedImage == null){
+                            makeToast("Unable to take photo");
+                        }
                     }
                 }
                 break;
@@ -211,7 +284,7 @@ public class UploadActivity extends AppCompatActivity {
             case ACTION_REQUEST_GALLERY:
                 if (resultCode == Activity.RESULT_OK) {
                     Uri uri = data.getData();
-                    Log.d("duti", "gallery image uri (file path): "+uri);
+                    Log.d("duti", "gallery image uri (file path): " + uri);
                     if (uri != null) {
                         startCrop(uri, "gallery", "");
                     }
@@ -252,7 +325,7 @@ public class UploadActivity extends AppCompatActivity {
     }
 
     // delete cropped image file from storage
-   private void deleteExternalStoragePublicPicture() {
+    private void deleteExternalStoragePublicPicture() {
         File file = new File(croppedImageFile);
         file.delete();
     }
