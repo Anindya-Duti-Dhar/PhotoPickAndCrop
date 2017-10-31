@@ -3,6 +3,8 @@ package anindya.sample.photo_pick_upload;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -13,15 +15,19 @@ import android.support.v4.content.FileProvider;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.List;
 
 public class UploadActivity extends AppCompatActivity {
 
@@ -29,7 +35,6 @@ public class UploadActivity extends AppCompatActivity {
     String TAG = getClass().getName();
     ImageView mIconCamera, mIconGallery, mImageView, mIconImageEdit;
     FloatingActionButton mFab;
-    boolean isKeyboardOpen = false;
 
     LinearLayout mLayoutButtons;
     RelativeLayout mLayoutImageView;
@@ -37,7 +42,13 @@ public class UploadActivity extends AppCompatActivity {
     private static final int ACTION_REQUEST_CAMERA = 99;
     private static final int ACTION_REQUEST_CROPPED = 100;
     private static final int ACTION_REQUEST_GALLERY = 101;
-    private Uri imageUri;
+
+    private Uri mCameraImageUri;
+    String CameraImageFileName;
+    File CameraImagesFolder;
+    File CameraPhotoFile;
+    String croppedImageFile;
+    Uri mCroppedImageUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,6 +94,15 @@ public class UploadActivity extends AppCompatActivity {
             }
         });
 
+        mImageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mCroppedImageUri != null) {
+                    startCrop(mCroppedImageUri, "gallery", "");
+                }
+            }
+        });
+
         mIconImageEdit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -104,24 +124,58 @@ public class UploadActivity extends AppCompatActivity {
 
     }
 
+    // method to make toast
+    public void makeToast(String message) {
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+    }
+
     public void goToCamera() {
-        //folder stuff
-        File imagesFolder = new File(Environment.getExternalStoragePublicDirectory(getString(R.string.app_name)), "");
-        if (!imagesFolder.exists()) {
-            imagesFolder.mkdir();
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        // Ensure that there's a camera activity to handle the intent
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+            // Create the File where the photo should go
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+            } catch (IOException ex) {
+                // Error occurred while creating the File
+                makeToast("Error creating Image File");
+            }
+            // Continue only if the File was successfully created
+            if (photoFile != null) {
+                // create file mUriFromIntent
+                mCameraImageUri = FileProvider.getUriForFile(UploadActivity.this,
+                        BuildConfig.APPLICATION_ID + ".fileprovider",
+                        photoFile);
+                // add uri to intent
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCameraImageUri);
+
+                // grant read uri permission
+                List<ResolveInfo> resInfoList = getPackageManager().queryIntentActivities(takePictureIntent, PackageManager.MATCH_DEFAULT_ONLY);
+                for (ResolveInfo resolveInfo : resInfoList) {
+                    String packageName = resolveInfo.activityInfo.packageName;
+                    grantUriPermission(packageName, mCameraImageUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                }
+                // start intent
+                startActivityForResult(takePictureIntent, ACTION_REQUEST_CAMERA);
+            }
         }
+    }
+
+
+    // create file object method
+    private File createImageFile() throws IOException {
+        //folder stuff
+        CameraImagesFolder = new File(Environment.getExternalStoragePublicDirectory(getString(R.string.app_name)), "");
+        if (!CameraImagesFolder.exists()) {
+            CameraImagesFolder.mkdir();
+        }
+        // Create an image file name
+        String timeStamp = (new SimpleDateFormat("yyyyMMddHHmmss")).format(Calendar.getInstance().getTime());
+        CameraImageFileName = "IMG_" + timeStamp + ".jpg";
         // create file with name
-        File photo = new File(imagesFolder, "IMG_" + (new SimpleDateFormat("yyyyMMddHHmmss")).format(Calendar.getInstance().getTime()) + ".jpg");
-        // create file mUriFromIntent
-        imageUri = FileProvider.getUriForFile(UploadActivity.this,
-                BuildConfig.APPLICATION_ID + ".provider",
-                photo);
-        // create camera intent
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        intent.putExtra(MediaStore.EXTRA_OUTPUT,
-                imageUri);
-        // start device camera
-        startActivityForResult(intent, ACTION_REQUEST_CAMERA);
+        CameraPhotoFile = new File(CameraImagesFolder, CameraImageFileName);
+        return CameraPhotoFile;
     }
 
     public void goToGallery() {
@@ -131,8 +185,11 @@ public class UploadActivity extends AppCompatActivity {
         startActivityForResult(chooser, ACTION_REQUEST_GALLERY);
     }
 
-    private void startCrop(Uri imageUri) {
+    // go to activity to crop the selected image
+    private void startCrop(Uri imageUri, String cropType, String fileName) {
         Intent intent = new Intent(UploadActivity.this, ImageCroppedActivity.class);
+        intent.putExtra("type", cropType);
+        intent.putExtra("file", fileName);
         intent.setData(imageUri);
         startActivityForResult(intent, ACTION_REQUEST_CROPPED);
     }
@@ -143,9 +200,10 @@ public class UploadActivity extends AppCompatActivity {
         switch (requestCode) {
             case ACTION_REQUEST_CAMERA:
                 if (resultCode == Activity.RESULT_OK) {
-                    Uri selectedImage = imageUri;
+                    Uri selectedImage = mCameraImageUri;
+                    Log.d("duti", "camera image uri (file path): "+mCameraImageUri);
                     if (selectedImage != null) {
-                        startCrop(selectedImage);
+                        startCrop(selectedImage, "camera", CameraPhotoFile.getPath());
                     }
                 }
                 break;
@@ -153,17 +211,26 @@ public class UploadActivity extends AppCompatActivity {
             case ACTION_REQUEST_GALLERY:
                 if (resultCode == Activity.RESULT_OK) {
                     Uri uri = data.getData();
+                    Log.d("duti", "gallery image uri (file path): "+uri);
                     if (uri != null) {
-                        startCrop(uri);
+                        startCrop(uri, "gallery", "");
                     }
                 }
                 break;
 
             case ACTION_REQUEST_CROPPED:
                 if (resultCode == Activity.RESULT_OK) {
-                    Uri imageUri = data.getData();
+                    mCroppedImageUri = data.getData();
+                    Bundle b = data.getExtras();
+                    croppedImageFile = (String) b.get("picture");
+                    // convert ImageFile to Byte[] Array
                     try {
-                        Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
+                        byte[] byteArray = readFile(croppedImageFile);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    try {
+                        Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), mCroppedImageUri);
                         if (mLayoutButtons.getVisibility() == View.VISIBLE) {
                             mLayoutButtons.setVisibility(View.GONE);
                         }
@@ -181,6 +248,34 @@ public class UploadActivity extends AppCompatActivity {
                         e.printStackTrace();
                     }
                 }
+        }
+    }
+
+    // delete cropped image file from storage
+   private void deleteExternalStoragePublicPicture() {
+        File file = new File(croppedImageFile);
+        file.delete();
+    }
+
+    public static byte[] readFile(String file) throws IOException {
+        return readFile(new File(file));
+    }
+
+    public static byte[] readFile(File file) throws IOException {
+        // Open file
+        RandomAccessFile f = new RandomAccessFile(file, "r");
+        try {
+            // Get and check length
+            long longlength = f.length();
+            int length = (int) longlength;
+            if (length != longlength)
+                throw new IOException("File size >= 2 GB");
+            // Read file and return data
+            byte[] data = new byte[length];
+            f.readFully(data);
+            return data;
+        } finally {
+            f.close();
         }
     }
 

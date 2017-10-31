@@ -15,6 +15,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -34,6 +35,9 @@ public class ImageCroppedActivity extends AppCompatActivity {
     private ImageCropView imageCropView;
     File mOriginalImageFile;
     Uri mUriFromIntent;
+
+    String cropType;
+    String incomingCameraFilePath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,22 +59,42 @@ public class ImageCroppedActivity extends AppCompatActivity {
         // get intent data for image from Send Post Activity
         Intent i = getIntent();
         mUriFromIntent = i.getData();
+        Log.d("duti", "Image uri (file path) for crop: " + mUriFromIntent);
 
-        // set image into the view to crop
-        Bitmap bitmap = null;
-        try {
-            // convert Uri into bitmap
-            bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), mUriFromIntent);
-        } catch (IOException e) {
-            e.printStackTrace();
+        Bundle b = i.getExtras();
+        cropType = (String) b.get("type");
+
+        if (cropType.equals("camera")) {
+            incomingCameraFilePath = (String) b.get("file");
+            // set image into the view to crop
+            Bitmap bitmap = null;
+            try {
+                // convert Uri into bitmap
+                bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), mUriFromIntent);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            Matrix matrix = new Matrix();
+            matrix.postRotate(getImageOrientation(incomingCameraFilePath));
+            Bitmap rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(),
+                    bitmap.getHeight(), matrix, true);
+
+            imageCropView.setImageBitmap(rotatedBitmap);
+
+            deleteExternalStoragePublicPicture();
+        } else {
+            // set image into the view to crop
+            Bitmap bitmap = null;
+            try {
+                // convert Uri into bitmap
+                bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), mUriFromIntent);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            imageCropView.setImageBitmap(bitmap);
         }
-
-        Matrix matrix = new Matrix();
-        matrix.postRotate(getImageOrientation(mUriFromIntent.getPath()));
-        Bitmap rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(),
-                bitmap.getHeight(), matrix, true);
-
-        imageCropView.setImageBitmap(rotatedBitmap);
 
         // set image aspect ration
         imageCropView.setAspectRatio(1, 1);
@@ -93,6 +117,12 @@ public class ImageCroppedActivity extends AppCompatActivity {
 
     }
 
+    // delete camera image file from storage
+    private void deleteExternalStoragePublicPicture() {
+        File file = new File(incomingCameraFilePath);
+        file.delete();
+    }
+
     public int getImageOrientation(String imagePath) {
         int rotate = 0;
         try {
@@ -102,6 +132,8 @@ public class ImageCroppedActivity extends AppCompatActivity {
             int orientation = exif.getAttributeInt(
                     ExifInterface.TAG_ORIENTATION,
                     ExifInterface.ORIENTATION_NORMAL);
+            //Log.d("duti", "Orientation: "+String.valueOf(orientation));
+
             switch (orientation) {
                 case ExifInterface.ORIENTATION_ROTATE_270:
                     rotate = 270;
@@ -116,6 +148,9 @@ public class ImageCroppedActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        //Log.d("duti", "final Orientation: "+String.valueOf(rotate));
+
         return rotate;
     }
 
@@ -132,6 +167,7 @@ public class ImageCroppedActivity extends AppCompatActivity {
             bitmapFile = new File(file, "IMG_" + (new SimpleDateFormat("yyyyMMddHHmmss")).format(Calendar.getInstance().getTime()) + ".jpg");
             fileOutputStream = new FileOutputStream(bitmapFile);
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream);
+            final File finalBitmapFile = bitmapFile;
             MediaScannerConnection.scanFile(this, new String[]{bitmapFile.getAbsolutePath()}, null, new MediaScannerConnection.MediaScannerConnectionClient() {
                 @Override
                 public void onMediaScannerConnected() {
@@ -143,9 +179,11 @@ public class ImageCroppedActivity extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
+                            Log.d("duti", "cropped image uri (file path): " + uri);
                             // when crop and converting is done then send it to the SendPostActivity class with data
                             Intent returnIntent = new Intent();
                             returnIntent.setData(uri);
+                            returnIntent.putExtra("picture", finalBitmapFile.getPath());
                             setResult(Activity.RESULT_OK, returnIntent);
                             finish();
                         }
