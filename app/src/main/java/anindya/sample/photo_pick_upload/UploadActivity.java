@@ -2,11 +2,14 @@ package anindya.sample.photo_pick_upload;
 
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.media.ExifInterface;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -24,11 +27,14 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import com.squareup.picasso.Picasso;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 public class UploadActivity extends AppCompatActivity {
@@ -45,12 +51,12 @@ public class UploadActivity extends AppCompatActivity {
     private static final int ACTION_REQUEST_CROPPED = 100;
     private static final int ACTION_REQUEST_GALLERY = 101;
 
-    private Uri mCameraImageUri;
-    String CameraImageFileName;
-    File CameraImagesFolder;
-    File CameraPhotoFile;
-    String croppedImageFile;
-    Uri mCroppedImageUri;
+    private Uri mCroppedImageUri;
+    String  croppedImageFile;
+
+    Context context = UploadActivity.this;
+    String mCurrentPhotoPath;
+    Uri photoURIGlobal;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -132,42 +138,38 @@ public class UploadActivity extends AppCompatActivity {
     }
 
     public void goToCamera() {
-        String deviceName =  android.os.Build.MANUFACTURER+" "+android.os.Build.DEVICE+" "+android.os.Build.MODEL;
-        Log.d("duti", "Device Details: "+deviceName);
-        if(deviceName.contains("GT-I9301I")) {
-            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            startActivityForResult(intent, ACTION_REQUEST_CAMERA);
-        }
-        else {
-            Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            // Ensure that there's a camera activity to handle the intent
-            if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-                // Create the File where the photo should go
-                File photoFile = null;
-                try {
-                    photoFile = createImageFile();
-                } catch (IOException ex) {
-                    // Error occurred while creating the File
-                    makeToast("Error creating Image File");
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        // Ensure that there's a camera activity to handle the intent
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+            // Create the File where the photo should go
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+                Log.d("duti", "photoFile: "+photoFile.toString());
+                Log.d("duti", " photoURI file created");
+            } catch (IOException ex) {
+                // Error occurred while creating the File
+                Log.d("duti","photoFile create ERROR: "+ex.toString());
+                Log.d("duti", "photoURI error creation");
+            }
+            // Continue only if the File was successfully created
+            if (photoFile != null) {
+                Log.d("duti","** photoURI **");
+                Uri photoURI = FileProvider.getUriForFile(this,
+                        "anindya.sample.photo_pick_upload.fileprovider",
+                        photoFile);
+                Log.d("duti", "photoURI: "+photoURI.toString());
+                photoURIGlobal = photoURI;
+                // add uri to intent
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                // grant read uri permission
+                List<ResolveInfo> resInfoList = context.getPackageManager().queryIntentActivities(takePictureIntent, PackageManager.MATCH_DEFAULT_ONLY);
+                for (ResolveInfo resolveInfo : resInfoList) {
+                    String packageName = resolveInfo.activityInfo.packageName;
+                    context.grantUriPermission(packageName, photoURI, Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 }
-                // Continue only if the File was successfully created
-                if (photoFile != null) {
-                    // create file mUriFromIntent
-                    mCameraImageUri = FileProvider.getUriForFile(UploadActivity.this,
-                            BuildConfig.APPLICATION_ID + ".fileprovider",
-                            photoFile);
-                    // add uri to intent
-                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCameraImageUri);
-
-                    // grant read uri permission
-                    List<ResolveInfo> resInfoList = getPackageManager().queryIntentActivities(takePictureIntent, PackageManager.MATCH_DEFAULT_ONLY);
-                    for (ResolveInfo resolveInfo : resInfoList) {
-                        String packageName = resolveInfo.activityInfo.packageName;
-                        grantUriPermission(packageName, mCameraImageUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    }
-                    // start intent
-                    startActivityForResult(takePictureIntent, ACTION_REQUEST_CAMERA);
-                }
+                // start intent
+                startActivityForResult(takePictureIntent, ACTION_REQUEST_CAMERA);
             }
         }
     }
@@ -175,17 +177,39 @@ public class UploadActivity extends AppCompatActivity {
 
     // create file object method
     private File createImageFile() throws IOException {
-        //folder stuff
-        CameraImagesFolder = new File(Environment.getExternalStoragePublicDirectory(getString(R.string.app_name)), "");
-        if (!CameraImagesFolder.exists()) {
-            CameraImagesFolder.mkdir();
-        }
         // Create an image file name
-        String timeStamp = (new SimpleDateFormat("yyyyMMddHHmmss")).format(Calendar.getInstance().getTime());
-        CameraImageFileName = "IMG_" + timeStamp + ".jpg";
-        // create file with name
-        CameraPhotoFile = new File(CameraImagesFolder, CameraImageFileName);
-        return CameraPhotoFile;
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "IMG_" + timeStamp + "_H_";
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File storageDir2 = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        File storageDir3 = new File(storageDir2,"PickNCrop");
+        /**
+         * create the folder for the app if it does not exist
+         */
+        if( !storageDir3.exists() ){
+            storageDir3.mkdirs();
+        }
+        Log.d("storageDir",storageDir.toString());
+        Log.d("storageDir2",storageDir2.toString());
+        Log.d("storageDir3",storageDir3.toString());
+        /**
+         * not full control over a filename,
+         * if I want to have full control, I need to create a new file and give it a name
+         *
+         * e.g File imageFile = new File(MyApplication.getAlbumDir(), imageFileName + MyApplication.JPEG_FILE_SUFFIX);
+         *
+         */
+        File image = File.createTempFile(
+                imageFileName,  /* prefix */
+                ".jpg",         /* suffix */
+                storageDir3      /* directory */
+        );
+
+        // Save a file: path for use with ACTION_VIEW intents
+        mCurrentPhotoPath = image.getAbsolutePath();
+        Log.d("duti", "image: "+image.toString());
+        Log.d("duti","mCurrentPhotoPath: "+mCurrentPhotoPath.toString());
+        return image;
     }
 
     public void goToGallery() {
@@ -210,75 +234,20 @@ public class UploadActivity extends AppCompatActivity {
         switch (requestCode) {
             case ACTION_REQUEST_CAMERA:
                 if (resultCode == Activity.RESULT_OK) {
-                    String deviceName =  android.os.Build.MANUFACTURER+" "+android.os.Build.DEVICE+" "+android.os.Build.MODEL;
-                    if(deviceName.contains("GT-I9301I")) {
-                        // Describe the columns you'd like to have returned. Selecting from the Thumbnails location gives you both the Thumbnail Image ID, as well as the original image ID
-                        String[] projection = {
-                                MediaStore.Images.Thumbnails._ID,  // The columns we want
-                                MediaStore.Images.Thumbnails.IMAGE_ID,
-                                MediaStore.Images.Thumbnails.KIND,
-                                MediaStore.Images.Thumbnails.DATA};
-                        String selection = MediaStore.Images.Thumbnails.KIND + "=" + // Select only mini's
-                                MediaStore.Images.Thumbnails.MINI_KIND;
+                    Uri imageUri = Uri.parse(mCurrentPhotoPath);
+                    File file = new File(imageUri.getPath());
+                    // ScanFile so it will be appeared on Gallery
+                    MediaScannerConnection.scanFile(UploadActivity.this,
+                            new String[]{imageUri.getPath()}, null,
+                            new MediaScannerConnection.OnScanCompletedListener() {
+                                public void onScanCompleted(String path, Uri uri) {
 
-                        String sort = MediaStore.Images.Thumbnails._ID + " DESC";
+                                }
+                            });
+                    Log.d("duti", "imageUri: "+imageUri.toString());
+                    Log.d("duti", "file: "+file.toString());
 
-                        //At the moment, this is a bit of a hack, as I'm returning ALL images, and just taking the latest one. There is a better way to narrow this down I think with a WHERE clause which is currently the selection variable
-                        Cursor myCursor = this.managedQuery(MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI, projection, selection, null, sort);
-
-                        long imageId = 0l;
-                        long thumbnailImageId = 0l;
-                        String thumbnailPath = "";
-
-                        try {
-                            myCursor.moveToFirst();
-                            imageId = myCursor.getLong(myCursor.getColumnIndexOrThrow(MediaStore.Images.Thumbnails.IMAGE_ID));
-                            thumbnailImageId = myCursor.getLong(myCursor.getColumnIndexOrThrow(MediaStore.Images.Thumbnails._ID));
-                            thumbnailPath = myCursor.getString(myCursor.getColumnIndexOrThrow(MediaStore.Images.Thumbnails.DATA));
-                        } finally {
-                            myCursor.close();
-                        }
-
-                        //Create new Cursor to obtain the file Path for the large image
-
-                        String[] largeFileProjection = {
-                                MediaStore.Images.ImageColumns._ID,
-                                MediaStore.Images.ImageColumns.DATA
-                        };
-
-                        String largeFileSort = MediaStore.Images.ImageColumns._ID + " DESC";
-                        myCursor = this.managedQuery(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, largeFileProjection, null, null, largeFileSort);
-                        String largeImagePath = "";
-
-                        try {
-                            myCursor.moveToFirst();
-                            //This will actually give you the file path location of the image.
-                            largeImagePath = myCursor.getString(myCursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.DATA));
-                        } finally {
-                            myCursor.close();
-                        }
-                        // These are the two URI's you'll be interested in. They give you a handle to the actual images
-                        Uri uriLargeImage = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, String.valueOf(imageId));
-                        Uri uriThumbnailImage = Uri.withAppendedPath(MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI, String.valueOf(thumbnailImageId));
-
-                        Log.d("duti", "camera image uri (file path): " + uriLargeImage);
-                        if (uriLargeImage != null) {
-                            startCrop(uriLargeImage, "camera", largeImagePath);
-                        }
-                        else if (uriLargeImage==null){
-                            makeToast("Unable to take photo");
-                        }
-                    }
-                    else{
-                        Uri selectedImage = mCameraImageUri;
-                        Log.d("duti", "camera image uri (file path): " + mCameraImageUri);
-                        if (selectedImage != null) {
-                            startCrop(selectedImage, "camera", CameraPhotoFile.getPath());
-                        }
-                        else if (selectedImage == null){
-                            makeToast("Unable to take photo");
-                        }
-                    }
+                    startCrop(photoURIGlobal, "camera", mCurrentPhotoPath);
                 }
                 break;
 

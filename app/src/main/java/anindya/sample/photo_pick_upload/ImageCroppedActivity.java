@@ -33,7 +33,6 @@ public class ImageCroppedActivity extends AppCompatActivity {
     String TAG = getClass().getName();
     FloatingActionButton mFab;
     private ImageCropView imageCropView;
-    File mOriginalImageFile;
     Uri mUriFromIntent;
 
     String cropType;
@@ -66,6 +65,7 @@ public class ImageCroppedActivity extends AppCompatActivity {
 
         if (cropType.equals("camera")) {
             incomingCameraFilePath = (String) b.get("file");
+            Uri imageUri = Uri.parse(incomingCameraFilePath);
             // set image into the view to crop
             Bitmap bitmap = null;
             try {
@@ -75,11 +75,13 @@ public class ImageCroppedActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
 
+            // rotate the bitmap if it's getting wrong rotation
             Matrix matrix = new Matrix();
-            matrix.postRotate(getImageOrientation(incomingCameraFilePath));
+            matrix.postRotate((float)getExif(imageUri));
             Bitmap rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(),
                     bitmap.getHeight(), matrix, true);
 
+            // set bitmap into the image view
             imageCropView.setImageBitmap(rotatedBitmap);
 
             deleteExternalStoragePublicPicture();
@@ -93,6 +95,7 @@ public class ImageCroppedActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
 
+            // set bitmap into the image view
             imageCropView.setImageBitmap(bitmap);
         }
 
@@ -123,35 +126,35 @@ public class ImageCroppedActivity extends AppCompatActivity {
         file.delete();
     }
 
-    public int getImageOrientation(String imagePath) {
-        int rotate = 0;
+    /**
+     * check exif of the image taken
+     */
+    public int getExif(Uri imageUri){
+        ExifInterface exif;
+        int rotation;
+        int  rotationInDegrees =0;
         try {
-            mOriginalImageFile = new File(imagePath);
-            ExifInterface exif = new ExifInterface(
-                    mOriginalImageFile.getAbsolutePath());
-            int orientation = exif.getAttributeInt(
-                    ExifInterface.TAG_ORIENTATION,
-                    ExifInterface.ORIENTATION_NORMAL);
-            //Log.d("duti", "Orientation: "+String.valueOf(orientation));
+            exif = new ExifInterface(imageUri.getPath());
+            rotation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
 
-            switch (orientation) {
-                case ExifInterface.ORIENTATION_ROTATE_270:
-                    rotate = 270;
-                    break;
-                case ExifInterface.ORIENTATION_ROTATE_180:
-                    rotate = 180;
-                    break;
-                case ExifInterface.ORIENTATION_ROTATE_90:
-                    rotate = 90;
-                    break;
-            }
+            rotationInDegrees = exifToDegrees(rotation);
         } catch (IOException e) {
             e.printStackTrace();
         }
+        Log.d("duti", "correct exif rotation: "+ Integer.toString(rotationInDegrees) );
+        return rotationInDegrees;
+    }
 
-        //Log.d("duti", "final Orientation: "+String.valueOf(rotate));
-
-        return rotate;
+    /**
+     * Transform exif integer into degree
+     * @param exifOrientation
+     * @return
+     */
+    private static int exifToDegrees(int exifOrientation) {
+        if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_90) { return 90; }
+        else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_180) {  return 180; }
+        else if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_270) {  return 270; }
+        return 0;
     }
 
     // convert bitmap into file
@@ -164,6 +167,7 @@ public class ImageCroppedActivity extends AppCompatActivity {
                 file.mkdir();
             }
 
+            // create visible the cropped image in the gallery
             bitmapFile = new File(file, "IMG_" + (new SimpleDateFormat("yyyyMMddHHmmss")).format(Calendar.getInstance().getTime()) + ".jpg");
             fileOutputStream = new FileOutputStream(bitmapFile);
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream);
