@@ -6,12 +6,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.media.ExifInterface;
-import android.media.MediaScannerConnection;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -27,13 +23,10 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
-import com.squareup.picasso.Picasso;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -85,6 +78,7 @@ public class UploadActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 //do here
+                makeToast("We have clicked");
             }
         });
 
@@ -145,20 +139,15 @@ public class UploadActivity extends AppCompatActivity {
             File photoFile = null;
             try {
                 photoFile = createImageFile();
-                Log.d("duti", "photoFile: "+photoFile.toString());
-                Log.d("duti", " photoURI file created");
             } catch (IOException ex) {
                 // Error occurred while creating the File
-                Log.d("duti","photoFile create ERROR: "+ex.toString());
-                Log.d("duti", "photoURI error creation");
+                makeToast("Failed to create file");
             }
             // Continue only if the File was successfully created
             if (photoFile != null) {
-                Log.d("duti","** photoURI **");
                 Uri photoURI = FileProvider.getUriForFile(this,
                         "anindya.sample.photo_pick_upload.fileprovider",
                         photoFile);
-                Log.d("duti", "photoURI: "+photoURI.toString());
                 photoURIGlobal = photoURI;
                 // add uri to intent
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
@@ -180,7 +169,7 @@ public class UploadActivity extends AppCompatActivity {
         // Create an image file name
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String imageFileName = "IMG_" + timeStamp + "_H_";
-        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        //File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
         File storageDir2 = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
         File storageDir3 = new File(storageDir2,"PickNCrop");
         /**
@@ -189,16 +178,6 @@ public class UploadActivity extends AppCompatActivity {
         if( !storageDir3.exists() ){
             storageDir3.mkdirs();
         }
-        Log.d("storageDir",storageDir.toString());
-        Log.d("storageDir2",storageDir2.toString());
-        Log.d("storageDir3",storageDir3.toString());
-        /**
-         * not full control over a filename,
-         * if I want to have full control, I need to create a new file and give it a name
-         *
-         * e.g File imageFile = new File(MyApplication.getAlbumDir(), imageFileName + MyApplication.JPEG_FILE_SUFFIX);
-         *
-         */
         File image = File.createTempFile(
                 imageFileName,  /* prefix */
                 ".jpg",         /* suffix */
@@ -207,8 +186,6 @@ public class UploadActivity extends AppCompatActivity {
 
         // Save a file: path for use with ACTION_VIEW intents
         mCurrentPhotoPath = image.getAbsolutePath();
-        Log.d("duti", "image: "+image.toString());
-        Log.d("duti","mCurrentPhotoPath: "+mCurrentPhotoPath.toString());
         return image;
     }
 
@@ -234,19 +211,7 @@ public class UploadActivity extends AppCompatActivity {
         switch (requestCode) {
             case ACTION_REQUEST_CAMERA:
                 if (resultCode == Activity.RESULT_OK) {
-                    Uri imageUri = Uri.parse(mCurrentPhotoPath);
-                    File file = new File(imageUri.getPath());
-                    // ScanFile so it will be appeared on Gallery
-                    MediaScannerConnection.scanFile(UploadActivity.this,
-                            new String[]{imageUri.getPath()}, null,
-                            new MediaScannerConnection.OnScanCompletedListener() {
-                                public void onScanCompleted(String path, Uri uri) {
-
-                                }
-                            });
-                    Log.d("duti", "imageUri: "+imageUri.toString());
-                    Log.d("duti", "file: "+file.toString());
-
+                    Log.d("duti", "gallery image uri (file path): " + photoURIGlobal);
                     startCrop(photoURIGlobal, "camera", mCurrentPhotoPath);
                 }
                 break;

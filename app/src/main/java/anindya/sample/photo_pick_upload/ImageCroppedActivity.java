@@ -26,6 +26,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 
 public class ImageCroppedActivity extends AppCompatActivity {
 
@@ -160,19 +161,21 @@ public class ImageCroppedActivity extends AppCompatActivity {
     // convert bitmap into file
     public File bitmapConvertToFile(final Bitmap bitmap) {
         FileOutputStream fileOutputStream = null;
-        File bitmapFile = null;
+        File image = null;
         try {
-            File file = new File(Environment.getExternalStoragePublicDirectory(getString(R.string.app_name)), "");
-            if (!file.exists()) {
-                file.mkdir();
+            // Create an image file name
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            String imageFileName = "IMG_" + timeStamp + "_H_";
+            File storageDir2 = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+            File storageDir3 = new File(storageDir2,"PickNCrop");
+            if( !storageDir3.exists() ){
+                storageDir3.mkdirs();
             }
-
-            // create visible the cropped image in the gallery
-            bitmapFile = new File(file, "IMG_" + (new SimpleDateFormat("yyyyMMddHHmmss")).format(Calendar.getInstance().getTime()) + ".jpg");
-            fileOutputStream = new FileOutputStream(bitmapFile);
+            image = File.createTempFile(imageFileName, ".jpg", storageDir3);
+            fileOutputStream = new FileOutputStream(image);
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream);
-            final File finalBitmapFile = bitmapFile;
-            MediaScannerConnection.scanFile(this, new String[]{bitmapFile.getAbsolutePath()}, null, new MediaScannerConnection.MediaScannerConnectionClient() {
+            final File finalBitmapFile = image;
+            MediaScannerConnection.scanFile(this, new String[]{image.getAbsolutePath()}, null, new MediaScannerConnection.MediaScannerConnectionClient() {
                 @Override
                 public void onMediaScannerConnected() {
 
@@ -205,7 +208,7 @@ public class ImageCroppedActivity extends AppCompatActivity {
                 }
             }
         }
-        return bitmapFile;
+        return image;
     }
 
     // Set up the toolbar title
