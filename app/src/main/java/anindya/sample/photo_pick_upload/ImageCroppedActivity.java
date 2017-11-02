@@ -85,7 +85,7 @@ public class ImageCroppedActivity extends AppCompatActivity {
             // set bitmap into the image view
             imageCropView.setImageBitmap(rotatedBitmap);
 
-            deleteExternalStoragePublicPicture();
+            //deleteExternalStoragePublicPicture();
         } else {
             // set image into the view to crop
             Bitmap bitmap = null;

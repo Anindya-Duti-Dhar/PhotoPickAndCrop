@@ -44,12 +44,13 @@ public class UploadActivity extends AppCompatActivity {
     private static final int ACTION_REQUEST_CROPPED = 100;
     private static final int ACTION_REQUEST_GALLERY = 101;
 
-    private Uri mCroppedImageUri;
     String  croppedImageFile;
 
     Context context = UploadActivity.this;
     String mCurrentPhotoPath;
     Uri photoURIGlobal;
+    boolean mTakenPicture = false;
+    boolean mCapturedCameraImage = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,8 +78,16 @@ public class UploadActivity extends AppCompatActivity {
         mFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //do here
-                makeToast("We have clicked");
+                if(mTakenPicture){
+                    if(mCapturedCameraImage){
+                        deleteCameraPicture();
+                    }
+                    makeToast("Upload SuccessFully");
+                    onBackPressed();
+                }
+                else{
+                    makeToast("Select One Image");
+                }
             }
         });
 
@@ -99,8 +108,8 @@ public class UploadActivity extends AppCompatActivity {
         mImageView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mCroppedImageUri != null) {
-                    startCrop(mCroppedImageUri, "gallery", "");
+                if (photoURIGlobal != null) {
+                    startCrop(photoURIGlobal, "gallery", "");
                 }
             }
         });
@@ -211,7 +220,8 @@ public class UploadActivity extends AppCompatActivity {
         switch (requestCode) {
             case ACTION_REQUEST_CAMERA:
                 if (resultCode == Activity.RESULT_OK) {
-                    Log.d("duti", "gallery image uri (file path): " + photoURIGlobal);
+                    Log.d("duti", "camera image uri (file path): " + photoURIGlobal);
+                    mCapturedCameraImage = true;
                     startCrop(photoURIGlobal, "camera", mCurrentPhotoPath);
                 }
                 break;
@@ -219,6 +229,7 @@ public class UploadActivity extends AppCompatActivity {
             case ACTION_REQUEST_GALLERY:
                 if (resultCode == Activity.RESULT_OK) {
                     Uri uri = data.getData();
+                    photoURIGlobal = uri;
                     Log.d("duti", "gallery image uri (file path): " + uri);
                     if (uri != null) {
                         startCrop(uri, "gallery", "");
@@ -228,7 +239,7 @@ public class UploadActivity extends AppCompatActivity {
 
             case ACTION_REQUEST_CROPPED:
                 if (resultCode == Activity.RESULT_OK) {
-                    mCroppedImageUri = data.getData();
+                    Uri mCroppedImageUri = data.getData();
                     Bundle b = data.getExtras();
                     croppedImageFile = (String) b.get("picture");
                     // convert ImageFile to Byte[] Array
@@ -247,6 +258,7 @@ public class UploadActivity extends AppCompatActivity {
                         }
                         mImageView.setVisibility(View.VISIBLE);
                         mImageView.setImageBitmap(bitmap);
+                        mTakenPicture = true;
                         if (mLayoutImageView.getVisibility() == View.VISIBLE) {
                             if (mIconImageEdit.getVisibility() == View.GONE) {
                                 mIconImageEdit.setVisibility(View.VISIBLE);
@@ -259,9 +271,9 @@ public class UploadActivity extends AppCompatActivity {
         }
     }
 
-    // delete cropped image file from storage
-    private void deleteExternalStoragePublicPicture() {
-        File file = new File(croppedImageFile);
+    // delete Camera image file from storage
+    private void deleteCameraPicture() {
+        File file = new File(mCurrentPhotoPath);
         file.delete();
     }
 
