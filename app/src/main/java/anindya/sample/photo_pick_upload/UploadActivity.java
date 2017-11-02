@@ -120,6 +120,7 @@ public class UploadActivity extends AppCompatActivity {
                 if (mLayoutImageView.getVisibility() == View.VISIBLE) {
                     if (mIconImageEdit.getVisibility() == View.VISIBLE) {
                         if(mCapturedCameraImage){
+                            mCapturedCameraImage= false;
                             deleteCameraPicture();
                         }
                         mIconImageEdit.setVisibility(View.GONE);
