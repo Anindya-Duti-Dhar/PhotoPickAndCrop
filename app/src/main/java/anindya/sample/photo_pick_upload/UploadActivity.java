@@ -119,6 +119,9 @@ public class UploadActivity extends AppCompatActivity {
             public void onClick(View v) {
                 if (mLayoutImageView.getVisibility() == View.VISIBLE) {
                     if (mIconImageEdit.getVisibility() == View.VISIBLE) {
+                        if(mCapturedCameraImage){
+                            deleteCameraPicture();
+                        }
                         mIconImageEdit.setVisibility(View.GONE);
                     }
                     if (mImageView.getVisibility() == View.VISIBLE) {
