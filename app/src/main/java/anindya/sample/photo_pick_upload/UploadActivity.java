@@ -49,8 +49,8 @@ public class UploadActivity extends AppCompatActivity {
     Context context = UploadActivity.this;
     String mCurrentPhotoPath;
     Uri photoURIGlobal;
-    boolean mTakenPicture = false;
-    boolean mCapturedCameraImage = false;
+    boolean hasPictureInTheBox = false;
+    boolean isCapturedByCamera = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,8 +78,8 @@ public class UploadActivity extends AppCompatActivity {
         mFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(mTakenPicture){
-                    if(mCapturedCameraImage){
+                if(hasPictureInTheBox){
+                    if(isCapturedByCamera){
                         deleteCameraPicture();
                     }
                     makeToast("Upload SuccessFully");
@@ -109,7 +109,12 @@ public class UploadActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (photoURIGlobal != null) {
-                    startCrop(photoURIGlobal, "gallery", "");
+                    if(isCapturedByCamera){
+                        startCrop(photoURIGlobal, "camera", mCurrentPhotoPath);
+                    }
+                    else{
+                        startCrop(photoURIGlobal, "gallery", "");
+                    }
                 }
             }
         });
@@ -119,8 +124,8 @@ public class UploadActivity extends AppCompatActivity {
             public void onClick(View v) {
                 if (mLayoutImageView.getVisibility() == View.VISIBLE) {
                     if (mIconImageEdit.getVisibility() == View.VISIBLE) {
-                        if(mCapturedCameraImage){
-                            mCapturedCameraImage= false;
+                        if(isCapturedByCamera){
+                            isCapturedByCamera = false;
                             deleteCameraPicture();
                         }
                         mIconImageEdit.setVisibility(View.GONE);
@@ -225,13 +230,14 @@ public class UploadActivity extends AppCompatActivity {
             case ACTION_REQUEST_CAMERA:
                 if (resultCode == Activity.RESULT_OK) {
                     Log.d("duti", "camera image uri (file path): " + photoURIGlobal);
-                    mCapturedCameraImage = true;
+                    isCapturedByCamera = true;
                     startCrop(photoURIGlobal, "camera", mCurrentPhotoPath);
                 }
                 break;
 
             case ACTION_REQUEST_GALLERY:
                 if (resultCode == Activity.RESULT_OK) {
+                    isCapturedByCamera = false;
                     Uri uri = data.getData();
                     photoURIGlobal = uri;
                     Log.d("duti", "gallery image uri (file path): " + uri);
@@ -262,7 +268,7 @@ public class UploadActivity extends AppCompatActivity {
                         }
                         mImageView.setVisibility(View.VISIBLE);
                         mImageView.setImageBitmap(bitmap);
-                        mTakenPicture = true;
+                        hasPictureInTheBox = true;
                         if (mLayoutImageView.getVisibility() == View.VISIBLE) {
                             if (mIconImageEdit.getVisibility() == View.GONE) {
                                 mIconImageEdit.setVisibility(View.VISIBLE);
